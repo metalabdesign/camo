@@ -59,22 +59,25 @@
   };
 
   process_url = function(url, transferred_headers, resp, remaining_redirects) {
-    var query_path, src, srcReq;
+    var query_path, srcReq;
     if ((url.host != null) && !url.host.match(RESTRICTED_IPS)) {
       if (url.host.match(EXCLUDED_HOSTS)) {
         return four_oh_four(resp, "Hitting excluded hostnames");
       }
-      src = Http.createClient(url.port || 80, url.hostname);
-      src.on('error', function(error) {
-        return four_oh_four(resp, "Client Request error " + error.stack);
-      });
       query_path = url.pathname;
       if (url.query != null) {
         query_path += "?" + url.query;
       }
       transferred_headers.host = url.host;
-      log(transferred_headers);
-      srcReq = src.request('GET', query_path, transferred_headers);
+      srcReq = Http.get({
+        hostname: url.hostname,
+        port: url.port || 80,
+        path: query_path,
+        headers: transferred_headers
+      });
+      srcReq.on('error', function(error) {
+        return four_oh_four(resp, "Client Request error " + error.stack);
+      });
       srcReq.on('response', function(srcResp) {
         var content_length, is_finished, newHeaders, newUrl;
         is_finished = true;
