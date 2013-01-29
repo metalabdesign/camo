@@ -12,6 +12,9 @@ max_redirects   = process.env.CAMO_MAX_REDIRECTS   || 4
 camo_hostname   = process.env.CAMO_HOSTNAME        || "unknown"
 logging_enabled = process.env.CAMO_LOGGING_ENABLED || "disabled"
 
+default_url = process.env.CAMO_DEFAULT_URL || null
+default_url = Url.parse default_url if default_url
+
 log = (msg) ->
   unless logging_enabled == "disabled"
     console.log("--------------------------------------------")
@@ -54,10 +57,10 @@ process_url = (url, transferred_headers, resp, remaining_redirects) ->
       path: query_path
       headers: transferred_headers
     }
-    
+
     srcReq.on 'error', (error) ->
       four_oh_four(resp, "Client Request error #{error.stack}")
-    
+
     srcReq.on 'response', (srcResp) ->
       is_finished = true
 
@@ -66,7 +69,10 @@ process_url = (url, transferred_headers, resp, remaining_redirects) ->
       content_length = srcResp.headers['content-length']
 
       if content_length > 5242880
-        four_oh_four(resp, "Content-Length exceeded")
+        if default_url
+          process_url default_url, transferred_headers, resp, remaining_redirects - 1
+        else
+          four_oh_four(resp, "Content-Length exceeded")
       else
         newHeaders =
           'content-type'           : srcResp.headers['content-type']
